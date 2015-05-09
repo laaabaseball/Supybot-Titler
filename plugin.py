@@ -1096,8 +1096,8 @@ class Titler(callbacks.Plugin):
         if not videoid:
             self.log.error("_yttitle: ERROR: Could not parse videoid from url: {0}".format(url))
             return None
-        # we have video id. lets fetch via gdata.
-        gdataurl =  'http://gdata.youtube.com/feeds/api/videos/%s?alt=jsonc&v=2' % videoid
+        # we have video id. lets fetch via gdata. ///// YouTube API v3 requires API key - replace here
+        gdataurl =  'https://www.googleapis.com/youtube/v3/videos?key=API-KEY-HERE&part=snippet&id=$s' % videoid
         lookup = self._openurl(gdataurl)
         if not lookup:
             self.log.error("_yttitle: could not fetch: {0}".format(url))
