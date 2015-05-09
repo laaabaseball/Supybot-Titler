@@ -9,6 +9,7 @@
 # my libs.
 import re  # regex for matching urls.
 import json  # json for APIs.
+import dateutil.parser # for parsing duration 
 import requests  # http stuff.
 import time  # longurl cache.
 import sqlite3 as sqlite  # linkdb.
@@ -837,7 +838,7 @@ class Titler(callbacks.Plugin):
         """Fetch information about vine videos."""
 
         # <meta property="twitter:title" content="Only The Best Vines's post on Vine">
-        # <meta property="twitter:description" content="Did that really just happen?!?😂😂">
+        # <meta property="twitter:description" content="Did that really just happen?!?ðŸ˜‚ðŸ˜‚">
         # we do a regular http fetch here.
         lookup = self._openurl(url)
         if not lookup:
@@ -1096,10 +1097,9 @@ class Titler(callbacks.Plugin):
         if not videoid:
             self.log.error("_yttitle: ERROR: Could not parse videoid from url: {0}".format(url))
             return None
-        # we have video id. lets fetch via gdata. ///// YouTube API v3 requires API key - replace here
-        gdataurl =  'https://www.googleapis.com/youtube/v3/videos?key=API-KEY-HERE&part=snippet&id=$s' % videoid
-        lookup = self._openurl(gdataurl)
-        if not lookup:
+        gdataurl =  'https://www.googleapis.com/youtube/v3/videos?key=API-KEY-HERE&part=snippet,contentDetails,statistics&id=%s' % videoid
+	lookup = self._openurl(gdataurl)
+	if not lookup:
             self.log.error("_yttitle: could not fetch: {0}".format(url))
             return None
         # we have our stuff back. try and parse json.
@@ -1110,18 +1110,15 @@ class Titler(callbacks.Plugin):
                 self.log.error("_yttitle: ERROR: {0} trying to fetch {1}".format(data['error']['message'], gdataurl))
                 return None
             # no errors. process json.
-            data = data['data']
-            title = data.get('title')
-            category = data.get('category')
-            duration = data.get('duration')
-            if duration:
-                duration = "%dm%ds" % divmod(duration, 60)
-            viewCount = data.get('viewCount')
-            if viewCount:
-                viewCount = self._numfmt(viewCount)
-            rating = data.get('rating')
+            title = data['items'][0]['snippet']['title']
+            channel = data['items'][0]['snippet']['channelTitle']
+            duration = data['items'][0]['contentDetails']['duration']
+            duration = duration.strip('PT')
+            duration = duration.lower()
+            viewCount = data['items'][0]['statistics']['viewCount']
+            likes =  data['items'][0]['statistics']['likeCount']
             ytlogo = "{0}{1}".format(self._bold(ircutils.mircColor("You", fg='red', bg='white')), self._bold(ircutils.mircColor("Tube", fg='white', bg='red')))
-            o = "{0} Video: {1} Category: {2} Duration: {3} Views: {4} Rating: {5}".format(ytlogo, title, category, duration, viewCount, rating)
+            o = "{0} Video: {1} Channel: {2} Duration: {3} Views: {4} Likes: {5}".format(ytlogo, title, channel, duration, viewCount, likes)
             return o
         except Exception, e:
             self.log.error("_yttitle: error processing JSON: {0}".format(e))
